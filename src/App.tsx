@@ -10,10 +10,13 @@ import { PlaylistsPage } from "./pages/PlaylistsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AboutPage } from "./pages/AboutPage";
 import { FavoritePage } from "./pages/FavoritePage";
+import { QueuePage } from "./pages/QueuePage";
 import { refreshSongMetadata } from "./services/metadataService";
 import { installBundledExampleSong } from "./services/exampleSongService";
 import { useLibraryStore } from "./stores/libraryStore";
 import { usePlayerStore } from "./stores/playerStore";
+import { DesktopLyricsBridge } from "./components/DesktopLyricsBridge";
+import "./stores/themeStore";
 
 let metadataRepairStarted = false;
 
@@ -69,6 +72,7 @@ export default function App() {
           <Route path="/" element={<LibraryPage />} />
           <Route path="/now-playing" element={<NowPlayingPage />} />
           <Route path="/playlists" element={<PlaylistsPage />} />
+          <Route path="/queue" element={<QueuePage />} />
           <Route path="/favorites" element={<FavoritePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/about" element={<AboutPage />} />
@@ -76,6 +80,7 @@ export default function App() {
       </div>
       <PlayerBar />
       <ToastViewport />
+      <DesktopLyricsBridge />
     </div>
   );
 }

@@ -9,19 +9,10 @@ import {
 import { openExternal } from "../services/systemService";
 
 const releaseNotes = [
-  "本地音乐导入与播放",
-  "LRC 歌词解析与同步",
-  "Apple Music 风格歌词显示",
-  "点击歌词跳转播放时间",
-  "手动滚动歌词后的“回到当前歌词”按钮",
-  "单击选中、双击播放",
-  "三点歌曲菜单",
-  "喜欢列表",
-  "播放模式切换：顺序播放 / 单曲循环 / 随机播放",
-  "MP3 内嵌封面读取",
-  "无封面时高级渐变封面",
-  "歌曲信息弹窗",
-  "危险操作二次确认弹窗",
+  "新增歌单系统",
+  "新增主题系统",
+  "新增桌面歌词",
+  "修复删除当前播放歌曲后音频仍继续播放的问题",
 ];
 
 const references = [
@@ -33,12 +24,8 @@ const references = [
 ];
 
 const futurePlans = [
-  "歌单系统",
-  "桌面歌词",
   "歌词编辑器",
   "歌曲信息手动编辑",
-  "更完整的主题系统",
-  "音频频谱 / 可视化效果",
   "全局快捷键",
   "更好的本地音乐库扫描",
 ];
@@ -49,7 +36,7 @@ export function AboutPage() {
       <header className="about-hero">
         <span className="about-hero__icon"><Music2 /></span>
         <div>
-          <span className="eyebrow">RELEASE 1.0</span>
+          <span className="eyebrow">RELEASE 1.1.0</span>
           <h1>INKBOX Music</h1>
           <p>一个注重视觉体验的本地音乐播放器。</p>
         </div>
@@ -60,7 +47,7 @@ export function AboutPage() {
           <header><AppWindow /><div><span>应用信息</span><h2>关于 INKBOX Music</h2></div></header>
           <p>支持本地音乐导入、Apple Music 风格歌词显示、歌词点击跳转、封面显示、渐变封面、喜欢列表和播放队列。</p>
           <dl>
-            <div><dt>版本</dt><dd>Release 1.0</dd></div>
+            <div><dt>版本</dt><dd>v1.1.0</dd></div>
             <div><dt>类型</dt><dd>本地音乐播放器</dd></div>
             <div><dt>技术栈</dt><dd>Tauri + React + TypeScript</dd></div>
             <div><dt>作者</dt><dd>ink</dd></div>
@@ -68,7 +55,7 @@ export function AboutPage() {
         </section>
 
         <section className="about-card about-card--release">
-          <header><CheckCircle2 /><div><span>更新日志</span><h2>Release 1.0</h2></div></header>
+          <header><CheckCircle2 /><div><span>更新日志</span><h2>v1.1.0</h2></div></header>
           <ul>{releaseNotes.map((item) => <li key={item}>{item}</li>)}</ul>
         </section>
 

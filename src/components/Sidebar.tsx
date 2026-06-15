@@ -18,8 +18,12 @@ export function Sidebar() {
           <span>正在播放</span>
         </NavLink>
         <NavLink to="/playlists">
+          <ListMusic />
+          <span>歌单</span>
+        </NavLink>
+        <NavLink to="/queue">
           <Rows3 />
-          <span>播放列表</span>
+          <span>播放队列</span>
         </NavLink>
         <NavLink to="/favorites">
           <Heart />

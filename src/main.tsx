@@ -4,11 +4,14 @@ import { HashRouter } from "react-router-dom";
 import "@applemusic-like-lyrics/core/style.css";
 import "./styles.css";
 import App from "./App";
+import { DesktopLyricsWindow } from "./pages/DesktopLyricsWindow";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <HashRouter>
-      <App />
-    </HashRouter>
+    {window.location.hash.startsWith("#/desktop-lyrics") ? (
+      <DesktopLyricsWindow />
+    ) : (
+      <HashRouter><App /></HashRouter>
+    )}
   </React.StrictMode>,
 );

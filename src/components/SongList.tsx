@@ -5,6 +5,7 @@ import {
   Heart,
   Info,
   ListEnd,
+  ListMusic,
   ListPlus,
   MoreHorizontal,
   Palette,
@@ -34,12 +35,15 @@ import { CoverArt } from "./CoverArt";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { GradientCoverModal } from "./GradientCoverModal";
 import { SongInfoModal } from "./SongInfoModal";
+import { AddToPlaylistModal } from "./AddToPlaylistModal";
+import { usePlaylistStore } from "../stores/playlistStore";
 
 interface SongListProps {
   songs: Song[];
+  playlistId?: string;
 }
 
-export function SongList({ songs }: SongListProps) {
+export function SongList({ songs, playlistId }: SongListProps) {
   const currentSong = usePlayerStore((state) => state.currentSong);
   const isPlaying = usePlayerStore((state) => state.isPlaying);
   const playSong = usePlayerStore((state) => state.playSong);
@@ -47,7 +51,8 @@ export function SongList({ songs }: SongListProps) {
   const playNextSong = usePlayerStore((state) => state.playNextSong);
   const addToQueue = usePlayerStore((state) => state.addToQueue);
   const updateSong = useLibraryStore((state) => state.updateSong);
-  const removeSong = useLibraryStore((state) => state.removeSong);
+  const removeFromLibrary = usePlayerStore((state) => state.removeFromLibrary);
+  const removeSongFromPlaylist = usePlaylistStore((state) => state.removeSongFromPlaylist);
   const selectedSongId = useUiStore((state) => state.selectedSongId);
   const setSelectedSongId = useUiStore((state) => state.setSelectedSongId);
   const showToast = useUiStore((state) => state.showToast);
@@ -58,6 +63,8 @@ export function SongList({ songs }: SongListProps) {
   const [gradientSong, setGradientSong] = useState<Song | null>(null);
   const [gradientDraft, setGradientDraft] = useState<GradientCover | null>(null);
   const [removeCandidate, setRemoveCandidate] = useState<Song | null>(null);
+  const [playlistCandidate, setPlaylistCandidate] = useState<Song | null>(null);
+  const [removePlaylistCandidate, setRemovePlaylistCandidate] = useState<Song | null>(null);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
   const activeMenuSong = songs.find((song) => song.id === menuSongId);
 
@@ -176,11 +183,7 @@ export function SongList({ songs }: SongListProps) {
 
   function confirmRemoveSong() {
     if (!removeCandidate) return;
-    removeSong(removeCandidate.id);
-    usePlayerStore.setState((state) => ({
-      currentSong: state.currentSong?.id === removeCandidate.id ? null : state.currentSong,
-      playlist: state.playlist.filter((item) => item.id !== removeCandidate.id),
-    }));
+    removeFromLibrary(removeCandidate.id);
     if (selectedSongId === removeCandidate.id) setSelectedSongId(null);
     setRemoveCandidate(null);
     showToast("已从音乐库移除，本地文件未删除", "success");
@@ -251,6 +254,8 @@ export function SongList({ songs }: SongListProps) {
           <button onClick={() => { playNextSong(activeMenuSong); setMenuSongId(null); showToast("已设为下一首播放", "success"); }}><ListEnd />下一首播放</button>
           <button onClick={() => { addToQueue(activeMenuSong); setMenuSongId(null); showToast("已添加到队列", "success"); }}><ListPlus />添加到队列</button>
           <button onClick={() => { updateEverywhere(activeMenuSong, { liked: !activeMenuSong.liked }); setMenuSongId(null); }}><Heart fill={activeMenuSong.liked ? "currentColor" : "none"} />{activeMenuSong.liked ? "取消喜欢" : "喜欢"}</button>
+          <button onClick={() => { setPlaylistCandidate(activeMenuSong); setMenuSongId(null); }}><ListMusic />添加到歌单</button>
+          {playlistId && <button className="is-danger" onClick={() => { setRemovePlaylistCandidate(activeMenuSong); setMenuSongId(null); }}><Trash2 />从当前歌单移除</button>}
           <hr />
           <button onClick={() => void importLyrics(activeMenuSong)}><FileMusic />导入歌词</button>
           <button onClick={() => void changeCover(activeMenuSong)}><FileImage />更换封面</button>
@@ -267,6 +272,7 @@ export function SongList({ songs }: SongListProps) {
         document.body,
       )}
       {infoSong && <SongInfoModal song={infoSong} onClose={() => setInfoSong(null)} />}
+      {playlistCandidate && <AddToPlaylistModal song={playlistCandidate} onClose={() => setPlaylistCandidate(null)} />}
       {gradientSong && gradientDraft && (
         <GradientCoverModal
           song={gradientSong}
@@ -287,6 +293,20 @@ export function SongList({ songs }: SongListProps) {
         confirmLabel="确认移除"
         onCancel={() => setRemoveCandidate(null)}
         onConfirm={confirmRemoveSong}
+      />
+      <ConfirmDialog
+        open={Boolean(removePlaylistCandidate)}
+        title="确认从歌单移除？"
+        description="歌曲仍会保留在音乐库中，也不会影响本地文件。"
+        confirmLabel="确认移除"
+        onCancel={() => setRemovePlaylistCandidate(null)}
+        onConfirm={() => {
+          if (playlistId && removePlaylistCandidate) {
+            removeSongFromPlaylist(playlistId, removePlaylistCandidate.id);
+            showToast("已从歌单移除", "success");
+          }
+          setRemovePlaylistCandidate(null);
+        }}
       />
     </>
   );

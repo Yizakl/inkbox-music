@@ -6,6 +6,7 @@ import type { PlayMode, Song } from "../types/music";
 import { clampNumber } from "../utils/safeNumber";
 import { useLibraryStore } from "./libraryStore";
 import { useUiStore } from "./uiStore";
+import { usePlaylistStore } from "./playlistStore";
 
 interface PlayerState {
   currentSong: Song | null;
@@ -26,6 +27,7 @@ interface PlayerState {
   playNextSong: (song: Song) => void;
   addToQueue: (song: Song) => void;
   clearQueue: () => void;
+  removeFromLibrary: (songId: string) => void;
   seekTo: (seconds: number, continuePlaying?: boolean) => Promise<void>;
   setVolume: (volume: number) => void;
   togglePlayMode: () => void;
@@ -181,7 +183,7 @@ export const usePlayerStore = create<PlayerState>()(persist((set, get) => ({
         : [...state.playlist, song],
     })),
   clearQueue: () => {
-    audioService.pause();
+    audioService.unload();
     set({
       currentSong: null,
       playlist: [],
@@ -190,6 +192,25 @@ export const usePlayerStore = create<PlayerState>()(persist((set, get) => ({
       currentTime: 0,
       duration: 0,
     });
+  },
+  removeFromLibrary: (songId) => {
+    const removingCurrent = get().currentSong?.id === songId;
+    if (removingCurrent) audioService.unload();
+    useLibraryStore.getState().removeSong(songId);
+    for (const playlist of usePlaylistStore.getState().playlists) {
+      if (playlist.songIds.includes(songId)) {
+        usePlaylistStore.getState().removeSongFromPlaylist(playlist.id, songId);
+      }
+    }
+    set((state) => ({
+      currentSong: removingCurrent ? null : state.currentSong,
+      playlist: state.playlist.filter((song) => song.id !== songId),
+      isPlaying: removingCurrent ? false : state.isPlaying,
+      isLoading: removingCurrent ? false : state.isLoading,
+      currentTime: removingCurrent ? 0 : state.currentTime,
+      duration: removingCurrent ? 0 : state.duration,
+      error: removingCurrent ? null : state.error,
+    }));
   },
   seekTo: async (seconds, continuePlaying = false) => {
     const duration = get().duration;

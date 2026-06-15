@@ -4,6 +4,7 @@ import { CoverArt, getSongCoverUrl } from "../components/CoverArt";
 import { CoverBackground } from "../components/CoverBackground";
 import { EmptyState } from "../components/EmptyState";
 import { LyricView } from "../components/LyricView";
+import { AudioVisualizer } from "../components/AudioVisualizer";
 import {
   chooseLyricFile,
   readLyrics,
@@ -85,6 +86,7 @@ export function NowPlayingPage() {
           <p>{player.currentSong.artist}</p>
           <span>{player.currentSong.album}</span>
         </div>
+        <AudioVisualizer isPlaying={player.isPlaying} />
         <div className="now-playing__controls">
           <button className="icon-button icon-button--large" title="上一首" onClick={() => void player.playPrevious()}>
             <SkipBack />

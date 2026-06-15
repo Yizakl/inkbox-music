@@ -9,12 +9,14 @@ import {
   SkipForward,
   Volume1,
   Volume2,
+  PanelTopOpen,
 } from "lucide-react";
 import { useState, type PointerEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePlayerStore } from "../stores/playerStore";
 import { formatTime } from "../utils/formatTime";
 import { CoverArt } from "./CoverArt";
+import { useDesktopLyricsStore } from "../stores/desktopLyricsStore";
 
 const modeIcons = {
   sequence: ListRestart,
@@ -32,6 +34,7 @@ export function PlayerBar() {
   const navigate = useNavigate();
   const player = usePlayerStore();
   const [scrubTime, setScrubTime] = useState<number | null>(null);
+  const desktopLyrics = useDesktopLyricsStore();
   const ModeIcon = modeIcons[player.playMode];
   const shownTime = scrubTime ?? player.currentTime;
   const progress = player.duration ? (shownTime / player.duration) * 100 : 0;
@@ -98,6 +101,13 @@ export function PlayerBar() {
       </div>
 
       <div className="player-bar__tools">
+        <button
+          className={`icon-button ${desktopLyrics.enabled ? "is-accent" : ""}`}
+          title={desktopLyrics.enabled ? "关闭桌面歌词" : "打开桌面歌词"}
+          onClick={() => void desktopLyrics.setEnabled(!desktopLyrics.enabled)}
+        >
+          <PanelTopOpen />
+        </button>
         <button
           className={`icon-button ${player.playMode !== "sequence" ? "is-accent" : ""}`}
           title={modeLabels[player.playMode]}

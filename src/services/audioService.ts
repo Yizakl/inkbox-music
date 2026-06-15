@@ -50,12 +50,24 @@ class AudioService {
     return Number.isFinite(this.audio.currentTime) ? this.audio.currentTime : 0;
   }
 
+  getMediaElement(): HTMLAudioElement {
+    return this.audio;
+  }
+
   async play(): Promise<void> {
     await this.audio.play();
   }
 
   pause(): void {
     this.audio.pause();
+  }
+
+  unload(): void {
+    this.audio.pause();
+    this.audio.removeAttribute("src");
+    this.audio.load();
+    this.loadedSrc = "";
+    this.loadedKey = "";
   }
 
   seekTo(seconds: number, duration?: number): number | null {
