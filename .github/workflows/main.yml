@@ -38,7 +38,8 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
-      matrix: ${{ json(needs.setup-matrix.outputs.matrix) }}
+      # 修正：將 json() 改為正確的 fromJSON()
+      matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix) }}
 
     runs-on: ${{ matrix.platform }}
 
