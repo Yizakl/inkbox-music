@@ -1,6 +1,5 @@
 name: Build Tauri App (Manual Trigger)
 
-# 關閉自動觸發，改為完全手動觸發
 on:
   workflow_dispatch:
     inputs:
@@ -15,7 +14,6 @@ on:
           - 'ios'
 
 jobs:
-  # 判斷矩陣任務是否需要執行的邏輯
   setup-matrix:
     runs-on: ubuntu-latest
     outputs:
@@ -23,7 +21,6 @@ jobs:
     steps:
       - id: set-matrix
         run: |
-          # 根據手動選擇的 inputs 動態生成構建矩陣
           if [ "${{ github.event.inputs.build_target }}" = "android" ]; then
             echo 'matrix={"include":[{"platform":"ubuntu-latest","target":"android"}]}' >> $GITHUB_OUTPUT
           elif [ "${{ github.event.inputs.build_target }}" = "ios" ]; then
@@ -38,7 +35,6 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
-      # 修正：將 json() 改為正確的 fromJSON()
       matrix: ${{ fromJSON(needs.setup-matrix.outputs.matrix) }}
 
     runs-on: ${{ matrix.platform }}
@@ -98,11 +94,21 @@ jobs:
         if: matrix.target == 'android'
         run: npx tauri android build --apk
 
-      # iOS 核心修改：強制關閉簽名，並設置最低兼容 iOS 16.4
+      # 修改處：iOS 編譯前置處理，修改專案檔規避簽名錯誤
+      - name: Disable Xcode Project Signing
+        if: matrix.target == 'ios'
+        run: |
+          XCODEPROJ_PATH="src-tauri/gen/apple/$(ls src-tauri/gen/apple | grep .xcodeproj)/project.pbxproj"
+          echo "正在修改 Xcode 專案配置：$XCODEPROJ_PATH"
+          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' "$XCODEPROJ_PATH"
+          sed -i '' 's/CODE_SIGNING_REQUIRED = YES;/CODE_SIGNING_REQUIRED = NO;/g' "$XCODEPROJ_PATH"
+          sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = "12345ABCDE";/g' "$XCODEPROJ_PATH"
+          sed -i '' 's/PRODUCT_NAME =/DEVELOPMENT_TEAM = "12345ABCDE"; PRODUCT_NAME =/g' "$XCODEPROJ_PATH"
+
       - name: Build Unsigned iOS App
         if: matrix.target == 'ios'
         run: |
-          npx tauri ios build -- CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" IPHONEOS_DEPLOYMENT_TARGET=16.4
+          npx tauri ios build -- CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="12345ABCDE" IPHONEOS_DEPLOYMENT_TARGET=16.4
 
       # 7. 上傳構建產物
       - name: Upload Android Artifacts
@@ -112,7 +118,6 @@ jobs:
           name: tauri-apk
           path: src-tauri/gen/android/**/*.apk
 
-      # 將編譯產出的 .app 資料夾打包成 zip 上傳
       - name: Upload iOS Unsigned App
         if: matrix.target == 'ios'
         uses: actions/upload-artifact@v4
