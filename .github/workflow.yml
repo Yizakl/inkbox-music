@@ -1,0 +1,100 @@
+name: Build Tauri App (APK & Unsigned APP)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            target: 'ios'
+          - platform: 'ubuntu-latest'
+            target: 'android'
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 1. 初始化 Node.js 環境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 2. 安裝前端依賴
+      - name: Install frontend dependencies
+        run: npm install
+
+      # 3. 初始化 Rust 環境
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || 'aarch64-apple-ios,x86_64-apple-ios,aarch64-apple-ios-sim' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      # 4. Android 專屬配置
+      - name: Setup Java (Android only)
+        if: matrix.target == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK (Android only)
+        if: matrix.target == 'android'
+        uses: android-actions/setup-android@v3
+
+      # 5. 安裝 Tauri CLI
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli
+
+      - name: Android Pre-requisites
+        if: matrix.target == 'android'
+        run: npx tauri android init
+
+      - name: iOS Pre-requisites
+        if: matrix.target == 'ios'
+        run: npx tauri ios init
+
+      # 6. 執行構建
+      - name: Build Android APK
+        if: matrix.target == 'android'
+        run: npx tauri android build --apk
+
+      # iOS 核心修改：傳入參數給 Xcode，強制不進行代碼簽名，並且只進行編譯（build）
+      - name: Build Unsigned iOS App
+        if: matrix.target == 'ios'
+        run: |
+          npx tauri ios build -- --code-sign-identity="" --code-signing-required=NO --code-signing-allowed=NO
+
+      # 7. 上傳構建產物
+      - name: Upload Android Artifacts
+        if: matrix.target == 'android'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-apk
+          path: src-tauri/gen/android/**/*.apk
+
+      # 將編譯產出的 .app 資料夾打包成 zip 上傳
+      - name: Upload iOS Unsigned App
+        if: matrix.target == 'ios'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-ios-app
+          path: src-tauri/gen/apple/build/arm64/**/*.app
