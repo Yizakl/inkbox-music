@@ -1,4 +1,4 @@
-name: Build Tauri App (Manual Trigger)
+name: Build Tauri App (For TrollStore)
 
 on:
   workflow_dispatch:
@@ -58,7 +58,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || 'aarch64-apple-ios,x86_64-apple-ios,aarch64-apple-ios-sim' }}
+          targets: ${{ matrix.target == 'android' && 'aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android' || 'aarch64-apple-ios' }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -94,21 +94,29 @@ jobs:
         if: matrix.target == 'android'
         run: npx tauri android build --apk
 
-      # 修改處：iOS 編譯前置處理，修改專案檔規避簽名錯誤
-      - name: Disable Xcode Project Signing
+      # iOS 核心修改：強制真機架構 (iphoneos)，並徹底關閉代碼簽名驗證
+      - name: Build Unsigned iOS App for Real Device
         if: matrix.target == 'ios'
         run: |
-          XCODEPROJ_PATH="src-tauri/gen/apple/$(ls src-tauri/gen/apple | grep .xcodeproj)/project.pbxproj"
-          echo "正在修改 Xcode 專案配置：$XCODEPROJ_PATH"
-          sed -i '' 's/ProvisioningStyle = Automatic;/ProvisioningStyle = Manual;/g' "$XCODEPROJ_PATH"
-          sed -i '' 's/CODE_SIGNING_REQUIRED = YES;/CODE_SIGNING_REQUIRED = NO;/g' "$XCODEPROJ_PATH"
-          sed -i '' 's/DEVELOPMENT_TEAM = "";/DEVELOPMENT_TEAM = "12345ABCDE";/g' "$XCODEPROJ_PATH"
-          sed -i '' 's/PRODUCT_NAME =/DEVELOPMENT_TEAM = "12345ABCDE"; PRODUCT_NAME =/g' "$XCODEPROJ_PATH"
+          npx tauri ios build -- \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            IPHONEOS_DEPLOYMENT_TARGET=16.4
 
-      - name: Build Unsigned iOS App
+      # 特殊步驟：為 TrollStore 製作標準 .ipa 包
+      - name: Package IPA for TrollStore
         if: matrix.target == 'ios'
         run: |
-          npx tauri ios build -- CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="12345ABCDE" IPHONEOS_DEPLOYMENT_TARGET=16.4
+          cd src-tauri/gen/apple/build/arm64
+          mkdir -p Payload
+          # 找到編譯出來的 .app 並複製到 Payload 目錄中
+          cp -r *.app Payload/
+          # 打包成 ipa
+          zip -r tauri-app-trollstore.ipa Payload
+          echo "TrollStore IPA 打包完成！"
 
       # 7. 上傳構建產物
       - name: Upload Android Artifacts
@@ -118,9 +126,10 @@ jobs:
           name: tauri-apk
           path: src-tauri/gen/android/**/*.apk
 
-      - name: Upload iOS Unsigned App
+      # 上傳製做好的 .ipa 檔案
+      - name: Upload iOS TrollStore IPA
         if: matrix.target == 'ios'
         uses: actions/upload-artifact@v4
         with:
-          name: tauri-ios-app
-          path: src-tauri/gen/apple/build/arm64/**/*.app
+          name: tauri-ios-trollstore-ipa
+          path: src-tauri/gen/apple/build/arm64/*.ipa
