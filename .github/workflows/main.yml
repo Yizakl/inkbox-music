@@ -1,24 +1,44 @@
-name: Build Tauri App (APK & Unsigned APP)
+name: Build Tauri App (Manual Trigger)
 
+# 關閉自動觸發，改為完全手動觸發
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
+    inputs:
+      build_target:
+        description: '請選擇要編譯的平台'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - 'both'
+          - 'android'
+          - 'ios'
 
 jobs:
+  # 判斷矩陣任務是否需要執行的邏輯
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          # 根據手動選擇的 inputs 動態生成構建矩陣
+          if [ "${{ github.event.inputs.build_target }}" = "android" ]; then
+            echo 'matrix={"include":[{"platform":"ubuntu-latest","target":"android"}]}' >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.inputs.build_target }}" = "ios" ]; then
+            echo 'matrix={"include":[{"platform":"macos-latest","target":"ios"}]}' >> $GITHUB_OUTPUT
+          else
+            echo 'matrix={"include":[{"platform":"ubuntu-latest","target":"android"},{"platform":"macos-latest","target":"ios"}]}' >> $GITHUB_OUTPUT
+          fi
+
   build:
+    needs: setup-matrix
     permissions:
       contents: write
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - platform: 'macos-latest'
-            target: 'ios'
-          - platform: 'ubuntu-latest'
-            target: 'android'
+      matrix: ${{ json(needs.setup-matrix.outputs.matrix) }}
 
     runs-on: ${{ matrix.platform }}
 
@@ -77,11 +97,11 @@ jobs:
         if: matrix.target == 'android'
         run: npx tauri android build --apk
 
-      # iOS 核心修改：傳入參數給 Xcode，強制不進行代碼簽名，並且只進行編譯（build）
+      # iOS 核心修改：強制關閉簽名，並設置最低兼容 iOS 16.4
       - name: Build Unsigned iOS App
         if: matrix.target == 'ios'
         run: |
-          npx tauri ios build -- --code-sign-identity="" --code-signing-required=NO --code-signing-allowed=NO
+          npx tauri ios build -- CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" IPHONEOS_DEPLOYMENT_TARGET=16.4
 
       # 7. 上傳構建產物
       - name: Upload Android Artifacts
